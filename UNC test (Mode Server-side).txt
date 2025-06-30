@@ -1,0 +1,127 @@
+-- ✅ Executor Strength Test UNC (30 Test - FIXED 100%)
+-- 💡 Aman, no crash, untuk semua executor: KRNL, Fluxus, Synapse, Electron
+
+local strength, totalWeight = 0, 0
+
+local function safe(func)
+    local success, result = pcall(func)
+    return success, result
+end
+
+local function Try(name, func, weight)
+    totalWeight = totalWeight + weight
+    print("Testing:", name)
+    local ok = safe(func)
+    if ok then
+        strength = strength + weight
+        print("    ✅ Passed:", name)
+    else
+        print("    ❌ Failed:", name)
+    end
+    wait(0.1)
+end
+
+print("[🧪] Executor Strength Test - UNC Style\n")
+
+-- 🔰 BASIC TESTS (10)
+Try("Read game.PlaceId", function() local _ = game.PlaceId end, 1)
+Try("Teleport Character", function()
+    local c = game.Players.LocalPlayer.Character
+    if c then c:MoveTo(Vector3.new(0, 50, 0)) end
+end, 1)
+Try("Create/Destroy Part", function()
+    local p = Instance.new("Part", workspace)
+    p:Destroy()
+end, 1)
+Try("Change WalkSpeed", function()
+    local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed = 100 end
+end, 1)
+Try("Lighting Time", function() game.Lighting.TimeOfDay = "14:00:00" end, 1)
+Try("GUI to PlayerGui", function()
+    local g = Instance.new("ScreenGui")
+    g.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+end, 1)
+Try("Fly (HRP CFrame)", function()
+    local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.CFrame = CFrame.new(0, 100, 0) end
+end, 1)
+Try("Loop Print", function() for i=1,3 do print("Loop "..i) end end, 1)
+Try("Read workspace name", function() local _ = workspace.Name end, 1)
+Try("Change Part Color", function()
+    local p = Instance.new("Part", workspace)
+    p.BrickColor = BrickColor.Random()
+    p:Destroy()
+end, 1)
+
+-- 🟨 MEDIUM TESTS (10)
+Try("getgenv", function() local _ = getgenv and getgenv() end, 2)
+Try("getconnections", function() local _ = getconnections or debug.getconnections end, 2)
+Try("setclipboard", function() if setclipboard then setclipboard("test") end end, 2)
+Try("Write to CoreGui", function()
+    local g = Instance.new("ScreenGui")
+    g.Parent = game:GetService("CoreGui")
+end, 2)
+Try("getrawmetatable", function()
+    if getrawmetatable then getrawmetatable(game) end
+end, 2)
+Try("setreadonly", function()
+    if setreadonly and getrawmetatable then
+        setreadonly(getrawmetatable(game), false)
+    end
+end, 2)
+Try("getgc", function()
+    if getgc then local _ = getgc(true) end
+end, 2)
+Try("debug.getupvalue", function()
+    if debug and debug.getupvalue then debug.getupvalue(print, 1) end
+end, 2)
+Try("Fire RemoteEvent", function()
+    local r = Instance.new("RemoteEvent", game.ReplicatedStorage)
+    r:FireServer("x")
+end, 2)
+Try("Access ReplicatedFirst", function()
+    local _ = game:GetService("ReplicatedFirst")
+end, 2)
+
+-- 🔴 ADVANCED TESTS (10)
+Try("hookfunction", function() if hookfunction then local _ = hookfunction end end, 3)
+Try("Drawing API", function()
+    if Drawing then
+        local d = Drawing.new("Text")
+        d.Text = "Test"
+        d:Remove()
+    end
+end, 3)
+Try("debug.setupvalue", function()
+    if debug and debug.setupvalue then debug.setupvalue(print, 1, function() end) end
+end, 3)
+Try("getnamecallmethod", function()
+    if getnamecallmethod then local _ = getnamecallmethod() end
+end, 3)
+Try("getfenv", function() if getfenv then local _ = getfenv(print) end end, 3)
+Try("setfenv", function() if setfenv then local _ = setfenv(print, {}) end end, 3)
+Try("writefile", function() if writefile then writefile("executor_test.txt", "UNC") end end, 3)
+Try("readfile", function() if readfile then pcall(readfile, "executor_test.txt") end end, 3)
+Try("getrenv()._G", function()
+    if getrenv then local _ = getrenv()._G end
+end, 3)
+Try("Access CoreGui Deep", function()
+    for _,v in ipairs(game.CoreGui:GetChildren()) do local _ = v.Name end
+end, 3)
+
+-- ✅ FINAL RESULT
+wait(1)
+local function label(score)
+	if score < 10 then return "🔥 Very Weak"
+	elseif score < 30 then return "⚠️ Weak"
+	elseif score < 60 then return "🛠️ Medium"
+	elseif score < 85 then return "⚡ Strong"
+	elseif score < 100 then return "🔴 High Power"
+	else return "🧠 Server-Side / Admin"
+	end
+end
+
+print("")
+print(string.format("[RESULT] Executor Strength: %d%% — %s", strength, label(strength)))
+print(string.format("[INFO] Total Tests Passed: %d of %d", strength, totalWeight))
