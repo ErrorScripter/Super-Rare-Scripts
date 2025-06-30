@@ -1,0 +1,150 @@
+-- 🚐 Orb Ring Simulator (Server-visible Visual Sim)
+-- This version is intended to simulate part attraction in a server-visible way (for education)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- === GUI ===
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 240, 0, 180)
+frame.Position = UDim2.new(0, 20, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "🫠 Orb Ring Simulator"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0.9, 0, 0, 30)
+toggle.Position = UDim2.new(0.05, 0, 0.3, 0)
+toggle.Text = "Activate"
+toggle.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+toggle.TextColor3 = Color3.new(1, 1, 1)
+toggle.Font = Enum.Font.Gotham
+toggle.TextSize = 14
+
+local radiusLabel = Instance.new("TextLabel", frame)
+radiusLabel.Size = UDim2.new(0.9, 0, 0, 20)
+radiusLabel.Position = UDim2.new(0.05, 0, 0.52, 0)
+radiusLabel.Text = "Radius: 8"
+radiusLabel.TextColor3 = Color3.new(1, 1, 1)
+radiusLabel.BackgroundTransparency = 1
+radiusLabel.Font = Enum.Font.Gotham
+radiusLabel.TextSize = 14
+
+local plus = Instance.new("TextButton", frame)
+plus.Size = UDim2.new(0, 30, 0, 25)
+plus.Position = UDim2.new(0.75, 0, 0.7, 0)
+plus.Text = "+"
+plus.Font = Enum.Font.GothamBold
+plus.TextSize = 18
+plus.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+plus.TextColor3 = Color3.new(1, 1, 1)
+
+local minus = Instance.new("TextButton", frame)
+minus.Size = UDim2.new(0, 30, 0, 25)
+minus.Position = UDim2.new(0.25, 0, 0.7, 0)
+minus.Text = "-"
+minus.Font = Enum.Font.GothamBold
+minus.TextSize = 18
+minus.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+minus.TextColor3 = Color3.new(1, 1, 1)
+
+local minimize = Instance.new("TextButton", frame)
+minimize.Size = UDim2.new(0, 30, 0, 30)
+minimize.Position = UDim2.new(1, -35, 0, 5)
+minimize.Text = "-"
+minimize.Font = Enum.Font.GothamBold
+minimize.TextSize = 18
+minimize.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimize.TextColor3 = Color3.new(1, 1, 1)
+
+-- Draggable GUI
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- === ORBIT SIM ===
+local active = false
+local radius = 8
+local parts = {}
+
+local function isValid(p)
+	return p:IsA("BasePart") and not p.Anchored and not p:IsDescendantOf(player.Character) and not p:FindFirstAncestorWhichIsA("Tool")
+end
+
+local function scan()
+	parts = {}
+	for _, p in ipairs(workspace:GetDescendants()) do
+		if isValid(p) then table.insert(parts, p) end
+	end
+end
+
+local t = 0
+RunService.Heartbeat:Connect(function(dt)
+	if not active then return end
+	t = t + dt
+	scan()
+	for i, p in ipairs(parts) do
+		if p and p.Parent then
+			local theta = (i / #parts) * math.pi * 2 + t
+			local offset = Vector3.new(math.cos(theta), math.sin(theta * 2), math.sin(theta)) * radius
+			local goal = hrp.Position + offset
+			p.AssemblyLinearVelocity = (goal - p.Position).Unit * 35
+		end
+	end
+end)
+
+-- Button logic
+toggle.MouseButton1Click:Connect(function()
+	active = not active
+	toggle.Text = active and "Deactivate" or "Activate"
+	toggle.BackgroundColor3 = active and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 150, 255)
+end)
+
+plus.MouseButton1Click:Connect(function()
+	radius = math.clamp(radius + 2, 4, 100)
+	radiusLabel.Text = "Radius: " .. tostring(radius)
+end)
+
+minus.MouseButton1Click:Connect(function()
+	radius = math.clamp(radius - 2, 1, 100)
+	radiusLabel.Text = "Radius: " .. tostring(radius)
+end)
+
+minimize.MouseButton1Click:Connect(function()
+	local min = frame.Size.Y.Offset <= 40
+	frame:TweenSize(UDim2.new(0, 240, 0, min and 180 or 30), "Out", "Quad", 0.2, true)
+	for _, v in ipairs(frame:GetChildren()) do
+		if v ~= title and v ~= minimize then v.Visible = min end
+	end
+	minimize.Text = min and "-" or "+"
+end)
